@@ -1,0 +1,42 @@
+body {
+  color: #3f3f3f;
+  background: url("/imgs/2.jpeg");
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.page-container {
+  width:820px;
+  min-width:820px;
+  padding:40px calc(50% - 410px);
+}
+
+h1 { font-size: 2.4em; }
+h2 { font-size: 2.2em; }
+h3 { font-size: 2em; }
+h4 { font-size: 1.8em; }
+h5 { font-size: 1.5em; }
+h6 { font-size: 1.2em; }
+p, a { font-size: 1em; }
+
+footer {
+  background: #2f2f2f;
+  width:100%;
+  padding: 40px 0;
+  text-align:center;
+}
+
+footer a {
+  color:#ff6565;
+  text-decoration: none;
+}
+
+footer p { color:#ffffff; }
+
+canvas {
+  width:800px;
+  height:600px;
+  border:5px solid #3f3f3f;
+  margin:40px auto auto auto;
+  background:#ffffff;
+}
