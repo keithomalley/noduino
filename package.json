@@ -1,0 +1,6 @@
+{
+  "name": "arduinode",
+  "version": "0.0.1",
+  "description": "An app that takes arduino serial input and controls a game",
+  "dependencies": {}
+}
