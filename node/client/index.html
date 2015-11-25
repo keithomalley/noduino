@@ -12,13 +12,65 @@
     <div class="page-container">
       <h1>Endless runner game</h1>
       <p>Made with Node, Arduino and HTML5 Canvas</p>
+      <p>Press button to jump, tilt forward to slide, open slide to control brightness, twist to control speed</p>
 
-      <canvas>
+      <canvas id="c" width="800" height="600">
         <p>If you can see this your browser is too old, update it or download chrome/edge/safari/firefox :)</p>
       </canvas>
     </div>
 
+    <div class="debug-info"><p>// Info from arduino</p></div>
+
     <footer><p>Created by <a href="https://github.com/keithomalley">Keith O'Malley</a></p></footer>
+
+    <!-- Allow us to use the socket client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script src="/js/player.js"></script>
+
+    <script>
+      var controls = {jump: "0", speed: "50", slide: "0", brightness: "1"};
+      // Set up the socket and allow input from arduino
+      var socket = io();
+      socket.on("arduino input", function(input){
+        $(".debug-info p").text(input);
+        controls_array = input.split(",");
+        controls.jump = controls_array[0];
+        controls.speed = controls_array[1];
+        controls.slide = controls_array[2];
+        controls.brightness = controls_array[3];
+      });
+
+      // Set up variables for the canvas
+      var canvas = document.getElementById("c");
+      var context = canvas.getContext("2d");
+
+      var bg = new Image();
+      bg.src = "/imgs/background.png";
+      var bg_offset = 0;
+
+      var player = new Player(300,400,40,80, "#3c76b3");
+
+      function draw(){
+        requestAnimationFrame(draw);
+        context.clearRect(0,0,800,600);
+
+        // draw the background and scroll it
+        context.drawImage(bg, 0 + (bg_offset % 1800) ,0, 1800, 600);
+        context.drawImage(bg, 0 + (bg_offset % 1800) + 1799 ,0, 1800, 600);
+
+        player.draw(context, controls.slide, controls.jump);
+
+        context.fillStyle="rgba(0,0,0," + (controls.brightness / 65) + ")";
+        context.fillRect(0,00,800,600);
+
+        bg_offset -= Math.round(controls.speed / 20) + 1;
+
+      }
+
+      draw();
+
+    </script>
 
   </body>
 </html>
