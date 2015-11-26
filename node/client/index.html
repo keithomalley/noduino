@@ -103,7 +103,7 @@
           boxes.push({
               x: 0,
               y: height - 30,
-              width: width * 50,
+              width: width * 10,
               height: 50
           });
           boxes.push({
@@ -166,7 +166,7 @@
 
           player.grounded = false;
           for (var i = 0; i < boxes.length; i++) {
-            boxes[i].x -= (1 + (controls.speed / 10));
+            boxes[i].x -= (1 + (controls.speed / 20));
             context.rect(boxes[i].x, boxes[i].y, boxes[i].width, boxes[i].height);
             var dir = colCheck(player, boxes[i]);
             if (dir === "l" || dir === "r") {
@@ -186,7 +186,7 @@
             player.velY = 0;
           }
 
-          if(player.x <= 0) {
+          if(player.x <= 0 || player.y > height) {
             end = true;
           }
 
