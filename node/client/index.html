@@ -25,51 +25,229 @@
 
     <!-- Allow us to use the socket client -->
     <script src="/socket.io/socket.io.js"></script>
+    <!-- jquery -->
     <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <!-- Request Animation Frame shim -->
+    <script src="/js/raf.js"></script>
+    <!-- the player class -->
     <script src="/js/player.js"></script>
 
     <script>
-      var controls = {jump: "0", speed: "50", slide: "0", brightness: "1"};
-      // Set up the socket and allow input from arduino
-      var socket = io();
-      socket.on("arduino input", function(input){
-        $(".debug-info p").text(input);
-        controls_array = input.split(",");
-        controls.jump = controls_array[0];
-        controls.speed = controls_array[1];
-        controls.slide = controls_array[2];
-        controls.brightness = controls_array[3];
+      $(document).ready(function(){
+
+//==============================================================================
+// Set up the socket and allow input from arduino
+//==============================================================================
+
+        var socket = io();
+        socket.on("arduino input", function(input){
+          $(".debug-info p").text(input);
+          controls_array = input.split(",");
+          controls.jump = controls_array[0];
+          controls.slide = controls_array[2];
+          controls.brightness = controls_array[3];
+          if( controls_array[1] > 75 ) {
+            controls.speed = 100;
+          } else if (controls_array[1] > 50) {
+            controls.speed = 75;
+          } else if (controls_array[1] > 25) {
+            controls.speed = 50;
+          } else if (controls_array[1] > 0) {
+            controls.speed = 25;
+          }
+        });
+
+
+//==============================================================================
+// Canvas and animation stuff
+//==============================================================================
+
+        // Set up variables for the canvas
+        var canvas = document.getElementById("c");
+        var context = canvas.getContext("2d");
+        var controls = {jump: "0", speed: "25", slide: "0", brightness: "0"};
+
+        var height = 600;
+        var width = 800;
+        var boxes = [];
+        var keys = [];
+
+        // set up background image variables
+        var bg = new Image();
+        bg.src = "/imgs/background.png";
+        var bg_offset = 0;
+        var bg_width = 1800;
+        var bg_height = 600;
+
+        var dir;
+
+        // create a player object
+        var player = new Player(300,400,20,40, "#3c76b3");
+        var end = false;
+
+        document.body.addEventListener("keydown", function (e) {
+            keys[e.keyCode] = true;
+            if(keys[82]){
+              setup();
+              draw();
+            }
+        });
+
+        document.body.addEventListener("keyup", function (e) {
+            keys[e.keyCode] = false;
+        });
+
+        function setup(){
+          boxes = [];
+          // dimensions
+          boxes.push({
+              x: 0,
+              y: height - 30,
+              width: width * 50,
+              height: 50
+          });
+          boxes.push({
+              x: 1300,
+              y: 500,
+              width: 80,
+              height: 80
+          });
+          boxes.push({
+              x: 400,
+              y: 500,
+              width: 80,
+              height: 80
+          });
+          boxes.push({
+              x: 1500,
+              y: 500,
+              width: 80,
+              height: 80
+          });
+          boxes.push({
+              x: 600,
+              y: 500,
+              width: 40,
+              height: 40
+          });
+
+          bg_offset = 0;
+          player = new Player(300,400,20,40, "#3c76b3");
+          end = false;
+        }
+
+
+//==============================================================================
+// The Animation
+//==============================================================================
+
+        function draw(){
+          context.clearRect(0,0,width,height);
+
+          // draw the background, scroll and repeat it
+          context.drawImage(bg, 0 + bg_offset, 0, bg_width, bg_height);
+          context.drawImage(bg, 0 + bg_offset + (bg_width - 1) ,0, bg_width, bg_height);
+          // draw a transparent black box based on the brightness from the arduino
+          context.fillStyle="rgba(255,255,255,0.1)";
+          context.fillRect(0, 0, width, height);
+
+          // draw a transparent black box based on the brightness from the arduino
+          context.fillStyle="rgba(0,0,0," + (1 - (controls.brightness / 65)) + ")";
+          context.fillRect(0, 0, width, height);
+
+          bg_offset -= Math.round(controls.speed / 20) + 1;
+          bg_offset = (bg_offset % bg_width);
+
+          player.update(context, controls.slide, controls.jump);
+
+          // draw boxes
+          context.fillStyle = "black";
+          context.beginPath();
+
+          player.grounded = false;
+          for (var i = 0; i < boxes.length; i++) {
+            boxes[i].x -= (1 + (controls.speed / 10));
+            context.rect(boxes[i].x, boxes[i].y, boxes[i].width, boxes[i].height);
+            var dir = colCheck(player, boxes[i]);
+            if (dir === "l" || dir === "r") {
+                player.velX = 0;
+                player.jumping = false;
+            } else if (dir === "b") {
+                player.grounded = true;
+                player.jumping = false;
+            } else if (dir === "t") {
+                player.velY *= -1;
+            }
+          }
+          context.fill();
+
+
+          if(player.grounded){
+            player.velY = 0;
+          }
+
+          if(player.x <= 0) {
+            end = true;
+          }
+
+          player.x += player.velX;
+          player.y += player.velY;
+          // draw the player
+          player.draw(context);
+
+          if(end == true){
+            context.fillStyle="#ffffff";
+            context.font = "30px Futura";
+            context.textAlign = "center";
+            context.shadowBlur=10;
+            context.shadowColor="rgba(0,0,0,0.2)";
+            context.fillText("Game Over", canvas.width/2, (canvas.height/2) - 40);
+            context.font = "16px Futura";
+            context.fillText("press R to restart", canvas.width/2, canvas.height/2);
+
+            return;
+          }
+
+          // request animation frame and recursive loop the animation
+          requestAnimationFrame(draw);
+
+        }
       });
 
-      // Set up variables for the canvas
-      var canvas = document.getElementById("c");
-      var context = canvas.getContext("2d");
+      function colCheck(shapeA, shapeB) {
+        // get the vectors to check against
+        var vX = (shapeA.x + (shapeA.width / 2)) - (shapeB.x + (shapeB.width / 2)),
+        vY = (shapeA.y + (shapeA.height / 2)) - (shapeB.y + (shapeB.height / 2)),
+        // add the half widths and half heights of the objects
+        hWidths = (shapeA.width / 2) + (shapeB.width / 2),
+        hHeights = (shapeA.height / 2) + (shapeB.height / 2),
+        colDir = null;
 
-      var bg = new Image();
-      bg.src = "/imgs/background.png";
-      var bg_offset = 0;
-
-      var player = new Player(300,400,40,80, "#3c76b3");
-
-      function draw(){
-        requestAnimationFrame(draw);
-        context.clearRect(0,0,800,600);
-
-        // draw the background and scroll it
-        context.drawImage(bg, 0 + (bg_offset % 1800) ,0, 1800, 600);
-        context.drawImage(bg, 0 + (bg_offset % 1800) + 1799 ,0, 1800, 600);
-
-        player.draw(context, controls.slide, controls.jump);
-
-        context.fillStyle="rgba(0,0,0," + (controls.brightness / 65) + ")";
-        context.fillRect(0,00,800,600);
-
-        bg_offset -= Math.round(controls.speed / 20) + 1;
-
+        // if the x and y vector are less than the half width or half height, they we must be inside the object, causing a collision
+        if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
+          // figures out on which side we are colliding (top, bottom, left, or right)
+          var oX = hWidths - Math.abs(vX),
+          oY = hHeights - Math.abs(vY);
+          if (oX >= oY) {
+            if (vY > 0) {
+              colDir = "t";
+              shapeA.y += oY;
+            } else {
+              colDir = "b";
+              shapeA.y -= oY;
+            }
+          } else {
+            if (vX > 0) {
+              colDir = "l";
+              shapeA.x += oX;
+            } else {
+              colDir = "r";
+              shapeA.x -= oX;
+            }
+          }
+        }
+        return colDir;
       }
-
-      draw();
-
     </script>
 
   </body>
